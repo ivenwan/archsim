@@ -3,14 +3,17 @@ from __future__ import annotations
 from typing import Optional
 
 from .topology import Topology
+from .buffer_pool import BufferPool
 from ..metrics import Metrics
 
 
 class Simulator:
-    def __init__(self, topology: Optional[Topology] = None) -> None:
+    def __init__(self, topology: Optional[Topology] = None, tracer: Optional[object] = None) -> None:
         self.topology = topology or Topology()
         self.ticks = 0
         self.metrics = Metrics()
+        self.buffer_pool = BufferPool()
+        self.tracer = tracer
 
     def deliver(self, resource, port: str, msg) -> None:
         resource.in_queue(port).append(msg)
@@ -29,6 +32,13 @@ class Simulator:
 
         self.ticks += 1
         self.metrics.ticks = self.ticks
+        # Notify tracer after completing the tick
+        if self.tracer is not None and hasattr(self.tracer, "on_tick"):
+            try:
+                self.tracer.on_tick(self)
+            except Exception:
+                # Tracing should never break simulation
+                pass
 
     def run(self, max_ticks: int = 1000, until_quiescent: bool = False) -> None:
         for _ in range(max_ticks):
@@ -46,4 +56,3 @@ class Simulator:
             if any(stage for stage in link.pipeline):
                 return False
         return True
-
