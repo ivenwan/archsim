@@ -34,6 +34,9 @@ Concepts
 - ReadBus: Read interconnect with `read_request_latency`, `data_response_latency`, and `data_response_bandwidth` (defaults 5, 5, 128).
 - WriteBus: Write interconnect with `write_request_latency`, `write_response_latency` (default 5, 5) and `write_bandwidth` (default 128).
 - Channel: Base class with `bandwidth` and `latency` used by buses and for arbiter scheduling.
+  - `transfer_mode`: `interleaving` (default) or `blocking`.
+    - `interleaving`: concurrent initiators share bandwidth; expected arrivals are recalculated when set changes.
+    - `blocking`: one transfer uses the channel exclusively; others start after it completes.
 - DataBuffer + BufferPool: global buffer tracking
   - `DataBuffer(size, content?)`: data unit moved between memories.
   - `BufferPool`: global registry available as `sim.buffer_pool`, tracks buffer ownership and supports transfer/delete.

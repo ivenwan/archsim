@@ -12,6 +12,7 @@ from .core.topology import Topology
 from .resources.read_write_bus import ReadBus
 from .resources.memory import Memory
 from .resources.compute import ComputeUnit
+from .display import show_topology
 
 
 def run_example(args=None) -> int:
@@ -41,10 +42,13 @@ def run_example(args=None) -> int:
             )
         )
 
+    # Print topology before running
+    show_topology(topo)
     sim = Simulator(topo, tracer=tracer)
     sim.run(max_ticks=args.max_ticks if args else 200)
     print("archsim example run summary:")
     print(sim.metrics.summary())
+    _print_channel_summary(sim)
     return 0
 
 
@@ -83,6 +87,9 @@ def main(argv: list[str] | None = None) -> int:
         print("build() did not return a Simulator; exiting.")
         return 1
 
+    # Print topology before running
+    show_topology(sim.topology)
+
     # Optional tracing for custom configs as well
     if args.trace:
         from .trace import ConsoleTracer, TraceOptions
@@ -97,7 +104,24 @@ def main(argv: list[str] | None = None) -> int:
 
     sim.run(max_ticks=args.max_ticks)
     print(sim.metrics.summary())
+    _print_channel_summary(sim)
     return 0
+
+
+def _print_channel_summary(sim: Simulator) -> None:
+    # Print average occupancy for channels
+    from .core.channel import Channel
+
+    rows = []
+    for name, res in sim.topology.resources.items():
+        if isinstance(res, Channel):
+            rows.append((name, res.avg_occupancy, res._busy_ticks, res._ticks, res.transfer_mode))
+    if not rows:
+        return
+    print("Channel utilization (avg busy ratio):")
+    print("name\tavg\tbusy/ticks\tmode")
+    for name, avg, busy, ticks, mode in rows:
+        print(f"{name}\t{avg:.2f}\t{busy}/{ticks}\t{mode}")
 
 
 if __name__ == "__main__":

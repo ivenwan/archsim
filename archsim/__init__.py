@@ -17,6 +17,7 @@ from .resources.buffer_io import BufferProducer, BufferConsumer
 from .resources.generator import BufferGenerator
 from .resources.semaphore import SemaphoreStation
 from .resources.semaphore_client import SemaphoreClient
+from .resources.semaphore_recorder import SemaphoreRecorder
 
 __all__ = [
     "Simulator",
@@ -39,4 +40,5 @@ __all__ = [
     "BufferGenerator",
     "SemaphoreStation",
     "SemaphoreClient",
+    "SemaphoreRecorder",
 ]

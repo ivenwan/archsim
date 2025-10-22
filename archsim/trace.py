@@ -44,4 +44,15 @@ class ConsoleTracer:
                     print(
                         f"  link {lk.name}: moved={moved}B, occ={occ}, bw={lk.bandwidth}, lat={lk.latency}"
                     )
-
+        # Channels occupancy
+        try:
+            from .core.channel import Channel  # type: ignore
+        except Exception:
+            Channel = None  # type: ignore
+        if Channel is not None:
+            for name, res in sim.topology.resources.items():
+                if isinstance(res, Channel):
+                    if self.opt.show_empty or res._active_count > 0:
+                        print(
+                            f"  chan {name}: active={res._active_count}, mode={res.transfer_mode}, avg={res.avg_occupancy:.2f}"
+                        )

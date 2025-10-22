@@ -38,6 +38,14 @@ class Simulator:
                 self.buffer_pool.tick(self)
             except Exception:
                 pass
+        # Finalize channel occupancy (if resources expose finalize_tick)
+        for r in list(self.topology.resources.values()):
+            finalize = getattr(r, "finalize_tick", None)
+            if callable(finalize):
+                try:
+                    finalize(self)
+                except Exception:
+                    pass
         # Notify tracer after completing the tick
         if self.tracer is not None and hasattr(self.tracer, "on_tick"):
             try:
