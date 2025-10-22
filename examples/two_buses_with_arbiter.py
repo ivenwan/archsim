@@ -6,6 +6,7 @@ from archsim.resources.read_write_bus import ReadBus
 from archsim.resources.arbiter import Arbiter
 from archsim.resources.compute import ComputeUnit
 from archsim.resources.memory import Memory
+from archsim.core.channel import Channel
 from archsim.resources.generator import BufferGenerator
 
 
@@ -25,6 +26,8 @@ def build(topo: Topology, mode: str = "shared") -> Simulator:
     rbus1.add_requester("gen1")
     arb = Arbiter("arb", mode=mode)
     mem = Memory("memory", latency=10, max_issue_per_tick=1)
+    # Downstream channel (between arbiter and memory) for scheduling
+    down = Channel("downstream", bandwidth=128, latency=5)
     # Response bus to model memory->CPU returns
     rbus_resp = ReadBus("rbus_resp", read_request_latency=5, data_response_latency=5, data_response_bandwidth=128)
 
@@ -34,7 +37,7 @@ def build(topo: Topology, mode: str = "shared") -> Simulator:
     rbus_resp.add_requester("gen0")
     rbus_resp.add_requester("gen1")
 
-    topo.add(cpu0, cpu1, gen0, gen1, rbus0, rbus1, arb, mem, rbus_resp)
+    topo.add(cpu0, cpu1, gen0, gen1, rbus0, rbus1, arb, down, mem, rbus_resp)
 
     # CPUs -> their read buses (requests)
     topo.connect(cpu0, "out", rbus0, "in_cpu0", bandwidth=128, latency=1)
@@ -49,8 +52,11 @@ def build(topo: Topology, mode: str = "shared") -> Simulator:
     topo.connect(rbus0, "out_req", arb, "in0", bandwidth=128, latency=1)
     topo.connect(rbus1, "out_req", arb, "in1", bandwidth=128, latency=1)
 
-    # Arbiter -> memory
-    topo.connect(arb, "out", mem, "in", bandwidth=128, latency=1)
+    # Arbiter -> channel -> memory
+    topo.connect(arb, "out", down, "in", bandwidth=128, latency=1)
+    topo.connect(down, "out", mem, "in", bandwidth=128, latency=1)
+    # Inform arbiter of downstream channel for scheduling
+    arb.set_downstream_channel(down)
 
     # Memory responses -> response bus -> CPUs
     topo.connect(mem, "out", rbus_resp, "in_mem_resp", bandwidth=128, latency=1)

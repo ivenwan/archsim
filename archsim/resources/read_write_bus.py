@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections import deque
 from typing import Deque, Dict, List, Optional
 
-from ..core.resource import Resource
+from ..core.channel import Channel
 
 
-class ReadBus(Resource):
+class ReadBus(Channel):
     """
     ReadBus models a read interconnect that carries:
     - Read requests from multiple requesters toward memory
@@ -31,7 +31,8 @@ class ReadBus(Resource):
         data_response_latency: int = 5,
         data_response_bandwidth: int = 128,
     ) -> None:
-        super().__init__(name)
+        # Use response bandwidth as base channel bandwidth by default
+        super().__init__(name, bandwidth=max(1, data_response_bandwidth), latency=max(0, read_request_latency))
         if read_request_latency < 0 or data_response_latency < 0:
             raise ValueError("Latencies must be >= 0")
         if data_response_bandwidth <= 0:
@@ -135,7 +136,7 @@ class ReadBus(Resource):
                 self._rr_idx = (start + 1) % len(self._requesters)
 
 
-class WriteBus(Resource):
+class WriteBus(Channel):
     """
     WriteBus models a write interconnect that carries:
     - Write data/requests from multiple writers toward memory (bandwidth-limited)
@@ -160,7 +161,7 @@ class WriteBus(Resource):
         write_bandwidth: int = 128,
         write_response_latency: int = 5,
     ) -> None:
-        super().__init__(name)
+        super().__init__(name, bandwidth=max(1, write_bandwidth), latency=max(0, write_request_latency))
         if write_request_latency < 0 or write_response_latency < 0:
             raise ValueError("Latencies must be >= 0")
         if write_bandwidth <= 0:
@@ -254,4 +255,3 @@ class WriteBus(Resource):
                         break
                     idx = nxt
                 self._rr_idx = (start + 1) % len(self._writers)
-

@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import List, Optional
 
 from ..core.resource import Resource
+from ..core.channel import Channel
+from ..core.message import Message
 
 
 class Arbiter(Resource):
@@ -32,11 +34,18 @@ class Arbiter(Resource):
         self._inputs: List[str] = []
         self._rr_index: int = 0
         self._active_port: Optional[str] = None
+        # Scheduling against a downstream channel
+        self._downstream: Optional[Channel] = None
+        self._available_from: int = 0
 
     def add_input(self, port: str) -> None:
         if port not in self.inbox:
             self.add_port(port, direction="in")
             self._inputs.append(port)
+
+    def set_downstream_channel(self, channel: Channel) -> None:
+        """Inform the arbiter which channel it feeds for scheduling estimates."""
+        self._downstream = channel
 
     def _has_pending(self) -> bool:
         for p in self._inputs:
@@ -95,5 +104,21 @@ class Arbiter(Resource):
             q = self.inbox[self._active_port]
             # Drain as many messages as available into outbox this tick
             while q:
-                self.send("out", q.popleft())
-
+                msg = q.popleft()
+                # If this is a buffer transfer and we know our downstream channel,
+                # estimate arrival and record it in the pool using a simple scheduled model.
+                if isinstance(msg, Message) and getattr(msg, "kind", None) == "buffer_transfer" and self._downstream is not None:
+                    size = getattr(msg, "size", 1)
+                    start = max(sim.ticks, self._available_from)
+                    duration = self._downstream.estimate_ticks(size)
+                    arrival = start + duration
+                    # Extract buffer id if present
+                    payload = getattr(msg, "payload", {}) or {}
+                    buf_dict = payload.get("buffer")
+                    buf_id = None
+                    if isinstance(buf_dict, dict):
+                        buf_id = buf_dict.get("id")
+                    if buf_id:
+                        sim.buffer_pool.record_expected_arrival(str(buf_id), arrival)
+                    self._available_from = arrival
+                self.send("out", msg)

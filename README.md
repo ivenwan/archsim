@@ -33,6 +33,7 @@ Concepts
   - Modes: `shared` (round-robin sharing) and `scheduled` (serve one input fully then switch).
 - ReadBus: Read interconnect with `read_request_latency`, `data_response_latency`, and `data_response_bandwidth` (defaults 5, 5, 128).
 - WriteBus: Write interconnect with `write_request_latency`, `write_response_latency` (default 5, 5) and `write_bandwidth` (default 128).
+- Channel: Base class with `bandwidth` and `latency` used by buses and for arbiter scheduling.
 - DataBuffer + BufferPool: global buffer tracking
   - `DataBuffer(size, content?)`: data unit moved between memories.
   - `BufferPool`: global registry available as `sim.buffer_pool`, tracks buffer ownership and supports transfer/delete.
@@ -64,3 +65,7 @@ Extensibility
   - Send to memory: emit a `Message(kind="buffer_transfer", payload={"buffer": buf.to_dict()})` destined for the memory.
   - Consume: emit `Message(kind="buffer_consume", payload={"buffer_id": buf.id})` to free it.
   - Ownership: Memory adopts ownership on `buffer_transfer` (pool transfer). Compute or other memories can later free via `buffer_consume`.
+- Arbiter Scheduling
+  - Arbiter can be informed of a downstream `Channel` via `arb.set_downstream_channel(channel)`.
+  - On `buffer_transfer` requests, it estimates completion using the channel's bandwidth/latency and records an expected arrival tick in the `BufferPool`.
+  - The simulator advances time and the pool updates buffer state to `arrived` when the expected tick is reached.

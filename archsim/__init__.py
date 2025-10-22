@@ -4,6 +4,7 @@ from .core.link import Link
 from .core.resource import Resource
 from .core.message import Message
 from .core.databuffer import DataBuffer
+from .core.channel import Channel
 from .core.buffer_pool import BufferPool
 from .metrics import Metrics
 
@@ -24,6 +25,7 @@ __all__ = [
     "Resource",
     "Message",
     "DataBuffer",
+    "Channel",
     "BufferPool",
     "Metrics",
     "Bus",

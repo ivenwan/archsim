@@ -32,6 +32,12 @@ class Simulator:
 
         self.ticks += 1
         self.metrics.ticks = self.ticks
+        # Buffer pool time-based updates (e.g., expected arrivals)
+        if hasattr(self, "buffer_pool") and self.buffer_pool is not None:
+            try:
+                self.buffer_pool.tick(self)
+            except Exception:
+                pass
         # Notify tracer after completing the tick
         if self.tracer is not None and hasattr(self.tracer, "on_tick"):
             try:

@@ -20,6 +20,7 @@ class BufferPool:
         self._owner_of: Dict[str, Optional[str]] = {}
         self._owned_by: Dict[Optional[str], Set[str]] = {}
         self._triggers: Dict[str, List[Dict[str, Any]]] = {}
+        self._expected_arrival: Dict[str, int] = {}
 
     # Core operations
     def register(self, buffer: DataBuffer, owner: Optional[str] = None) -> DataBuffer:
@@ -66,6 +67,7 @@ class BufferPool:
                 self._owned_by[owner].discard(buffer_id)
             # Remove triggers tracking
             self._triggers.pop(buffer_id, None)
+            self._expected_arrival.pop(buffer_id, None)
         return buf
 
     # Accounting
@@ -124,3 +126,14 @@ class BufferPool:
                 created_at=sim.ticks,
             )
             sim.deliver(target, "in", msg)
+
+    # Scheduling helpers
+    def record_expected_arrival(self, buffer_id: str, tick: int) -> None:
+        self._expected_arrival[buffer_id] = int(tick)
+
+    def tick(self, sim) -> None:
+        # Transition buffers whose expected arrival is due
+        due = [bid for bid, t in list(self._expected_arrival.items()) if t <= sim.ticks]
+        for bid in due:
+            self.set_state(sim, bid, "arrived")
+            self._expected_arrival.pop(bid, None)

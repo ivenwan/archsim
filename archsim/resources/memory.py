@@ -64,7 +64,6 @@ class Memory(Resource):
                     sim.buffer_pool.transfer(buf.id, self.name)
                 else:
                     self.allocate_buffer(sim, buf)
-                sim.buffer_pool.set_state(sim, buf.id, "arrived")
                 # Optional ACK
                 ack = Message(
                     src=self.name,
