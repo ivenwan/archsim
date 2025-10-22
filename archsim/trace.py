@@ -56,3 +56,16 @@ class ConsoleTracer:
                         print(
                             f"  chan {name}: active={res._active_count}, mode={res.transfer_mode}, avg={res.avg_occupancy:.2f}"
                         )
+        # Processing elements busy state
+        try:
+            from .resources.pe import ProcessingElement  # type: ignore
+        except Exception:
+            ProcessingElement = None  # type: ignore
+        if ProcessingElement is not None:
+            for name, res in sim.topology.resources.items():
+                if isinstance(res, ProcessingElement):
+                    # res._busy_this_tick is updated during tick; finalize happens after
+                    if self.opt.show_empty or res._busy_this_tick:
+                        print(
+                            f"  pe   {name}: busy={res._busy_this_tick}, mode={res.mode}, avg={res.avg_utilization:.2f}"
+                        )

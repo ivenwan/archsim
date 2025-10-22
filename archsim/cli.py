@@ -116,12 +116,23 @@ def _print_channel_summary(sim: Simulator) -> None:
     for name, res in sim.topology.resources.items():
         if isinstance(res, Channel):
             rows.append((name, res.avg_occupancy, res._busy_ticks, res._ticks, res.transfer_mode))
-    if not rows:
-        return
-    print("Channel utilization (avg busy ratio):")
-    print("name\tavg\tbusy/ticks\tmode")
-    for name, avg, busy, ticks, mode in rows:
-        print(f"{name}\t{avg:.2f}\t{busy}/{ticks}\t{mode}")
+    if rows:
+        print("Channel utilization (avg busy ratio):")
+        print("name\tavg\tbusy/ticks\tmode")
+        for name, avg, busy, ticks, mode in rows:
+            print(f"{name}\t{avg:.2f}\t{busy}/{ticks}\t{mode}")
+
+    # Processing elements utilization
+    from .resources.pe import ProcessingElement
+    prows = []
+    for name, res in sim.topology.resources.items():
+        if isinstance(res, ProcessingElement):
+            prows.append((name, res.avg_utilization, res._busy_ticks, res._ticks, res.mode))
+    if prows:
+        print("PE utilization (avg busy ratio):")
+        print("name\tavg\tbusy/ticks\tmode")
+        for name, avg, busy, ticks, mode in prows:
+            print(f"{name}\t{avg:.2f}\t{busy}/{ticks}\t{mode}")
 
 
 if __name__ == "__main__":

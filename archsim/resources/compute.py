@@ -5,9 +5,10 @@ from typing import Optional, List, Tuple
 from ..core.resource import Resource
 from ..core.message import Message
 from ..core.databuffer import DataBuffer
+from .pe import ProcessingElement
 
 
-class ComputeUnit(Resource):
+class ComputeUnit(ProcessingElement):
     def __init__(
         self,
         name: str,
@@ -21,9 +22,11 @@ class ComputeUnit(Resource):
         buffer_dest: str = "memory",
         consume_after: Optional[int] = None,  # ticks after issue to request deallocation
     ) -> None:
-        super().__init__(name)
-        self.add_port("out", direction="out")
-        self.add_port("in", direction="in")
+        # Initialize as a PE with 1 in, 1 out in pro mode to retain original ports
+        super().__init__(name, in_queues=1, out_queues=1, mode="pro", output_target="memory")
+        # Backward-compatible alias ports 'in'/'out'
+        self.inbox["in"] = self.inbox["in0"]
+        self.outbox["out"] = self.outbox["out0"]
         self.total_requests = total_requests
         self.request_size = request_size
         self.issue_interval = max(1, issue_interval)
@@ -39,7 +42,7 @@ class ComputeUnit(Resource):
 
     def tick(self, sim) -> None:
         # Receive any responses
-        inq = self.inbox["in"]
+        inq = self.inbox["in0"]
         while inq:
             msg = inq.popleft()
             if msg.kind == "resp":
@@ -60,7 +63,7 @@ class ComputeUnit(Resource):
                     payload={"buffer": buf.to_dict()},
                     created_at=sim.ticks,
                 )
-                self.send("out", msg)
+                self.send("out0", msg)
                 sim.buffer_pool.set_state(sim, buf.id, "transit")
                 self._issued += 1
                 self._last_issue_tick = sim.ticks
@@ -77,7 +80,7 @@ class ComputeUnit(Resource):
                         kind=self.request_kind,
                         created_at=sim.ticks,
                     )
-                    self.send("out", req)
+                    self.send("out0", req)
                     self._issued += 1
                     self._last_issue_tick = sim.ticks
 
@@ -94,7 +97,7 @@ class ComputeUnit(Resource):
                     payload={"buffer_id": bid},
                     created_at=sim.ticks,
                 )
-                self.send("out", msg)
+                self.send("out0", msg)
 
     @property
     def progress(self) -> tuple[int, int]:

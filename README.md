@@ -42,6 +42,10 @@ Concepts
   - `BufferPool`: global registry available as `sim.buffer_pool`, tracks buffer ownership and supports transfer/delete.
   - States: `allocated` → `transit` → `arrived` → `responded` → `inuse` → `deallocated`.
   - Triggers: on state transitions, optional actions can be fired to a `SemaphoreStation`.
+ - ProcessingElement (PE): base for compute units
+   - Ports: multiple inputs (`in0..`), outputs (`out0..`), and a `cmd` input.
+   - Modes: `dummy` (greedy combine inputs, in:out ratio, emits a new buffer) and `pro` (custom `process_fn`).
+   - Utilization: tracks busy/idle; summary printed at end of run.
     - Attach triggers to a buffer via `buf.triggers = [{"on": "arrived", "action": "signal", "station": "sem", "index": 0}]`.
     - Or register via pool: `sim.buffer_pool.add_trigger(buf.id, {...})`.
     - Actions send `sem_signal`/`sem_wait` messages to the named station.
