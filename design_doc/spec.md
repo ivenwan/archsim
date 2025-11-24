@@ -38,3 +38,5 @@ Create a base queue class from which to derive input_queue and output_queue. USe
 
 Update the PE and Memory to adopt the newly created input and output queues. Run regression and fix if any issue.
 create a regression run command and self check if anything goes run.
+
+A databuffer in flight has several properties to model inflight status: the total size, the total received size, the total sent size and buffering size. The inbound data size is added to total received size, the outbound data size is added to the total sent size. The bytes temporarily hold in the buffer is the buffering size. When is possible, the queue attempt to maximize the transmission efficiency by accumulate enough in the buffering before sending a chunk to the channel with max channel capacity. For channels with infinite capacity, the transmission complete instantaneously.
