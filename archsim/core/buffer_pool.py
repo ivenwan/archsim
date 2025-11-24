@@ -182,6 +182,8 @@ class BufferPool:
             role=BufferRoles.DEST,
             destination_pe=dst_pe,
             destination_queue=dst_queue,
+            bytes_received=0,
+            bytes_sent=0,
         )
         self.register(dest, owner=dst_memory)
         self.set_state(sim, buffer_id=src_buffer_id, state=BufferStates.TRANSIT)

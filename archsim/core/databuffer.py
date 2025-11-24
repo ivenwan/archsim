@@ -38,6 +38,9 @@ class DataBuffer:
     role: str = BufferRoles.SOURCE
     destination_pe: Optional[str] = None
     destination_queue: Optional[str] = None
+    # Inflight accounting
+    bytes_received: int = 0
+    bytes_sent: int = 0
     # Optional transition triggers: list of dicts like
     # {"on": "arrived", "action": "signal"|"wait", "station": "sem", "index": 0}
     triggers: List[Dict[str, Any]] = field(default_factory=list)
@@ -66,6 +69,8 @@ class DataBuffer:
             "role": self.role,
             "destination_pe": self.destination_pe,
             "destination_queue": self.destination_queue,
+            "bytes_received": self.bytes_received,
+            "bytes_sent": self.bytes_sent,
             "triggers": list(self.triggers) if self.triggers else [],
         }
 
@@ -86,6 +91,20 @@ class DataBuffer:
             buf.destination_pe = d.get("destination_pe")
         if "destination_queue" in d:
             buf.destination_queue = d.get("destination_queue")
+        if "bytes_received" in d:
+            buf.bytes_received = int(d.get("bytes_received", 0))
+        if "bytes_sent" in d:
+            buf.bytes_sent = int(d.get("bytes_sent", 0))
         if "triggers" in d and isinstance(d["triggers"], list):
             buf.triggers = list(d["triggers"])  # shallow copy
         return buf
+
+    @property
+    def buffering_size(self) -> int:
+        return max(0, self.bytes_received - self.bytes_sent)
+
+    def add_received(self, amount: int) -> None:
+        self.bytes_received = min(self.size, max(0, self.bytes_received + amount))
+
+    def add_sent(self, amount: int) -> None:
+        self.bytes_sent = min(self.size, max(0, self.bytes_sent + amount))
