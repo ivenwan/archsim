@@ -28,6 +28,8 @@ def run_example(args=None) -> int:
     topo.connect(bus, "out_req", mem, "in", bandwidth=128, latency=1)
     topo.connect(mem, "out", bus, "in_mem_resp", bandwidth=128, latency=1)
     topo.connect(bus, "out_cpu0", cpu, "in", bandwidth=128, latency=0)
+    # Register backpressure path
+    mem.register_inbound_channel(bus)
 
     # Tracing
     tracer = None
