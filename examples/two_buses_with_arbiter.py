@@ -57,6 +57,8 @@ def build(topo: Topology, mode: str = "shared") -> Simulator:
     topo.connect(down, "out", mem, "in", bandwidth=128, latency=1)
     # Inform arbiter of downstream channel for scheduling
     arb.set_downstream_channel(down)
+    # Backpressure registration
+    mem.register_inbound_channel(down)
 
     # Memory responses -> response bus -> CPUs
     topo.connect(mem, "out", rbus_resp, "in_mem_resp", bandwidth=128, latency=1)

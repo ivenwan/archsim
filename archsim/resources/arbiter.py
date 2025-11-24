@@ -188,7 +188,8 @@ class Arbiter(Resource):
             return
         now = sim.ticks
         n = max(1, len(self._active))
-        share_bw = max(1, int(self._downstream.bandwidth / n))
+        current_bw = self._downstream.current_bandwidth
+        share_bw = max(0, int(current_bw / n))
         for a in self._active:
             # Accumulate progress since last update using previous share
             dt = max(0, now - int(a.get("last_update", now)))
@@ -198,7 +199,7 @@ class Arbiter(Resource):
             # Remaining latency budget from start
             lat_elapsed = max(0, now - int(a.get("start", now)))
             lat_rem = max(0, int(self._downstream.latency) - lat_elapsed)
-            data_ticks = (remaining + share_bw - 1) // share_bw if share_bw > 0 else 0
+            data_ticks = (remaining + share_bw - 1) // share_bw if share_bw > 0 else 10**9
             expected = now + lat_rem + data_ticks
             a["per_share_bw"] = share_bw
             a["last_update"] = now

@@ -9,15 +9,23 @@ from ..core.databuffer import DataBuffer
 
 
 class Memory(Resource):
-    def __init__(self, name: str, latency: int = 20, max_issue_per_tick: int = 1):
+    def __init__(self, name: str, latency: int = 20, max_issue_per_tick: int = 1, size_limit: int = 1_000_000, fill_rate: int = 1_000_000, drain_rate: int = 1_000_000):
         super().__init__(name)
         self.latency = latency
         self.max_issue_per_tick = max_issue_per_tick
+        self.size_limit = size_limit
+        self.fill_rate = fill_rate
+        self.drain_rate = drain_rate
         self.add_port("in", direction="in")
         self.add_port("out", direction="out")
         self._inflight: Deque[Tuple[int, Message]] = deque()
         # Keep last simulator reference for reporting
         self._last_sim = None
+        self.bytes_current: int = 0
+        self._bytes_in_tick: int = 0
+        self._bytes_out_tick: int = 0
+        self.backpressured: bool = False
+        self._inbound_channels: list = []
 
     # Buffer APIs
     def allocate_buffer(self, sim, buf: DataBuffer) -> None:
@@ -38,9 +46,15 @@ class Memory(Resource):
             return 0
         return sim.buffer_pool.bytes_owned(self.name)
 
+    def register_inbound_channel(self, channel) -> None:
+        if channel not in self._inbound_channels:
+            self._inbound_channels.append(channel)
+
     def tick(self, sim) -> None:
         # Track last sim for reporting
         self._last_sim = sim
+        self._bytes_in_tick = 0
+        self._bytes_out_tick = 0
 
         # Issue new requests up to throughput
         issued = 0
@@ -48,6 +62,7 @@ class Memory(Resource):
         while inq and issued < self.max_issue_per_tick:
             req = inq.popleft()
             kind = getattr(req, "kind", "data")
+            self._bytes_in_tick += getattr(req, "size", 0)
 
             # Handle DataBuffer lifecycle operations
             if kind == "buffer_transfer":
@@ -117,4 +132,18 @@ class Memory(Resource):
         # Emit ready responses
         while self._inflight and self._inflight[0][0] <= sim.ticks:
             _, resp = self._inflight.popleft()
+            self._bytes_out_tick += getattr(resp, "size", 0)
             self.send("out", resp)
+
+        # Update occupancy with fill/drain rates
+        fill = min(self._bytes_in_tick, self.fill_rate)
+        self.bytes_current = min(self.size_limit, self.bytes_current + fill)
+        drain = min(self._bytes_out_tick, self.drain_rate, self.bytes_current)
+        self.bytes_current = max(0, self.bytes_current - drain)
+        # Determine backpressure and propagate to inbound channels
+        self.backpressured = self.bytes_current >= self.size_limit
+        for ch in self._inbound_channels:
+            try:
+                ch.set_backpressure(self.backpressured)
+            except Exception:
+                pass

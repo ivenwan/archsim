@@ -33,9 +33,15 @@ class Channel(Resource):
         self._busy_ticks: int = 0
         self._active_count: int = 0
         self._last_finalized_tick: int = -1
+        # Backpressure
+        self._backpressured: bool = False
 
     def estimate_ticks(self, size: int) -> int:
-        data_ticks = math.ceil(max(1, size) / self.bandwidth)
+        bw = self.current_bandwidth
+        if bw <= 0:
+            # Effectively stalled; return a large placeholder
+            return 10**9
+        data_ticks = math.ceil(max(1, size) / bw)
         return max(0, self.latency) + data_ticks
 
     @property
@@ -45,6 +51,13 @@ class Channel(Resource):
     @property
     def is_blocking(self) -> bool:
         return self.transfer_mode == "blocking"
+
+    @property
+    def current_bandwidth(self) -> int:
+        return 0 if self._backpressured else self.bandwidth
+
+    def set_backpressure(self, flag: bool) -> None:
+        self._backpressured = bool(flag)
 
     # Scheduling/occupancy API (called by arbiters)
     def set_active_state(self, now_tick: int, active_count: int, expected_end_tick: int | None = None) -> None:

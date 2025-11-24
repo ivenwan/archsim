@@ -60,6 +60,9 @@ class Link:
             # Now stage 0 is empty and ready to accept
             # Pull from src outbox subject to bandwidth
             capacity = self.bandwidth
+            # Apply backpressure if destination signals it
+            if getattr(self.dst, "backpressured", False):
+                capacity = 0
             outq = self.src.outbox.get(self.src_port)
             if outq is not None:
                 while outq and capacity >= getattr(outq[0], "size", 1):
@@ -69,6 +72,8 @@ class Link:
         else:
             # latency == 0: deliver immediately subject to bandwidth
             capacity = self.bandwidth
+            if getattr(self.dst, "backpressured", False):
+                capacity = 0
             outq = self.src.outbox.get(self.src_port)
             if outq is not None:
                 while outq and capacity >= getattr(outq[0], "size", 1):
@@ -87,4 +92,3 @@ class Link:
             return 0.0
         # utilization measured as avg bytes moved / bandwidth per tick
         return min(1.0, (self.utilization_sum / max(1, self.ticks)) / self.bandwidth)
-

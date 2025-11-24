@@ -51,6 +51,7 @@ def build(topo: Topology, mode: str = "interleaving") -> Simulator:
     topo.connect(arb, "out", down, "in", bandwidth=9999, latency=0)
     topo.connect(down, "out", mem, "in", bandwidth=9999, latency=0)
     arb.set_downstream_channel(down)
+    mem.register_inbound_channel(down)
 
     # Memory acks back to generators (not needed for arrival measurement but keeps symmetry)
     topo.connect(mem, "out", gen0, "in", bandwidth=9999, latency=0)
@@ -70,4 +71,3 @@ if __name__ == "__main__":
         sim.run(max_ticks=200)
         rec = sim.topology.get("rec")
         print({"grants": rec.grants})
-

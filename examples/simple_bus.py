@@ -18,6 +18,7 @@ def build(topo: Topology) -> Simulator:
     # Requests: cpu -> rbus -> mem
     topo.connect(cpu, "out", rbus, "in_cpu0", bandwidth=128, latency=1)
     topo.connect(rbus, "out_req", mem, "in", bandwidth=128, latency=1)
+    mem.register_inbound_channel(rbus)
 
     # Responses: mem -> rbus -> cpu
     topo.connect(mem, "out", rbus, "in_mem_resp", bandwidth=128, latency=1)
