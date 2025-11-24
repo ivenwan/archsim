@@ -13,6 +13,7 @@ class Simulator:
         self.ticks = 0
         self.metrics = Metrics()
         self.buffer_pool = BufferPool()
+        self.topology.simulator = self
         self.tracer = tracer
 
     def deliver(self, resource, port: str, msg) -> None:

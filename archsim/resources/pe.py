@@ -7,6 +7,7 @@ from typing import Callable, List, Optional, Tuple, Dict, Any, Union
 from ..core.resource import Resource
 from ..core.message import Message
 from ..core.databuffer import DataBuffer
+from ..core.queues import InputQueue, OutputQueue
 
 
 class ProcessingElement(Resource):
@@ -66,6 +67,18 @@ class ProcessingElement(Resource):
         self._consume_rate: int = 0
         self._output_progress: int = 0
         self._expected_output_size: int = 0
+        # Queue registrations
+        self._input_queues: List[InputQueue] = []
+        self._output_queues: List[OutputQueue] = []
+        for n in self.in_names:
+            iq = InputQueue(parent=self.name, direction="in", function=n)
+            iq.items = self.inbox[n]
+            self._input_queues.append(iq)
+        for n in self.out_names:
+            oq = OutputQueue(parent=self.name, function=n)
+            oq.items = self.outbox[n]
+            self._output_queues.append(oq)
+        self._queues_registered = False
 
     def _pop_command(self):
         q = self.inbox["cmd"]
@@ -168,6 +181,10 @@ class ProcessingElement(Resource):
         return random.random() < 0.5
 
     def tick(self, sim) -> None:
+        if not self._queues_registered and hasattr(sim, "topology"):
+            for q in self._input_queues + self._output_queues:
+                sim.topology.register_queue(q)
+            self._queues_registered = True
         self._busy_this_tick = False
         if self.mode == "dummy":
             self._dummy_process(sim)

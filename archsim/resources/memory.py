@@ -6,6 +6,7 @@ from typing import Deque, List, Tuple, Dict, Optional
 from ..core.resource import Resource
 from ..core.message import Message
 from ..core.databuffer import DataBuffer
+from ..core.queues import InputQueue, OutputQueue
 
 
 class Memory(Resource):
@@ -26,6 +27,12 @@ class Memory(Resource):
         self._bytes_out_tick: int = 0
         self.backpressured: bool = False
         self._inbound_channels: list = []
+        self._queues_registered = False
+        # Queue wrappers
+        self._iq = InputQueue(parent=self.name, direction="in", function="in")
+        self._iq.items = self.inbox["in"]
+        self._oq = OutputQueue(parent=self.name, function="out")
+        self._oq.items = self.outbox["out"]
 
     # Buffer APIs
     def allocate_buffer(self, sim, buf: DataBuffer) -> None:
@@ -53,6 +60,10 @@ class Memory(Resource):
     def tick(self, sim) -> None:
         # Track last sim for reporting
         self._last_sim = sim
+        if not self._queues_registered and hasattr(sim, "topology"):
+            sim.topology.register_queue(self._iq)
+            sim.topology.register_queue(self._oq)
+            self._queues_registered = True
         self._bytes_in_tick = 0
         self._bytes_out_tick = 0
 
