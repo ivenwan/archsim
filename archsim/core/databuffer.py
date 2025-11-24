@@ -15,6 +15,11 @@ class BufferStates:
     DEALLOCATED = "deallocated"
 
 
+class BufferRoles:
+    SOURCE = "source"
+    DEST = "destination"
+
+
 @dataclass
 class DataBuffer:
     """
@@ -28,6 +33,11 @@ class DataBuffer:
     content: Optional[bytes] = None
     id: str = field(default_factory=lambda: f"buf-{uuid4().hex[:8]}")
     state: str = BufferStates.ALLOCATED
+    # Ownership and role metadata
+    owner_memory: Optional[str] = None
+    role: str = BufferRoles.SOURCE
+    destination_pe: Optional[str] = None
+    destination_queue: Optional[str] = None
     # Optional transition triggers: list of dicts like
     # {"on": "arrived", "action": "signal"|"wait", "station": "sem", "index": 0}
     triggers: List[Dict[str, Any]] = field(default_factory=list)
@@ -52,6 +62,10 @@ class DataBuffer:
             "size": self.size,
             "content": self.content,
             "state": self.state,
+            "owner_memory": self.owner_memory,
+            "role": self.role,
+            "destination_pe": self.destination_pe,
+            "destination_queue": self.destination_queue,
             "triggers": list(self.triggers) if self.triggers else [],
         }
 
@@ -64,6 +78,14 @@ class DataBuffer:
         )
         if "state" in d:
             buf.state = str(d["state"])  # trust input
+        if "owner_memory" in d:
+            buf.owner_memory = d.get("owner_memory")
+        if "role" in d:
+            buf.role = str(d.get("role"))
+        if "destination_pe" in d:
+            buf.destination_pe = d.get("destination_pe")
+        if "destination_queue" in d:
+            buf.destination_queue = d.get("destination_queue")
         if "triggers" in d and isinstance(d["triggers"], list):
             buf.triggers = list(d["triggers"])  # shallow copy
         return buf

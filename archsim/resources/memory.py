@@ -21,6 +21,7 @@ class Memory(Resource):
 
     # Buffer APIs
     def allocate_buffer(self, sim, buf: DataBuffer) -> None:
+        buf.owner_memory = self.name
         sim.buffer_pool.register(buf, owner=self.name)
 
     def deallocate_buffer(self, sim, buf_id: str) -> Optional[DataBuffer]:
